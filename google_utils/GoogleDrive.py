@@ -42,6 +42,12 @@ Example usage:
     print(google_drive.drive_files)
 """
 
+"""
+TODO: constructor - Do not auth in the constructor. Not generic enough. 
+Make the program that is using it set the application name and secrets 
+file path and call auth explicitly.
+"""
+
 class GoogleDrive:
 
     """
