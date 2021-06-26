@@ -1,10 +1,10 @@
 import os
-from posixpath import expanduser
 import sys
 import time
 import base64
 import httplib2
 from mimetypes import MimeTypes
+from posixpath import expanduser
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.audio import MIMEAudio
@@ -47,6 +47,8 @@ Example usage:
 TODO: constructor - Do not auth in the constructor. Not generic enough. 
 Make the program that is using it set the application name and secrets 
 file path and call auth explicitly.
+TODO: items_to_match - create a class for this object so that all possible
+types are obvious to a user.
 """
 
 class Gmail:
@@ -61,7 +63,6 @@ class Gmail:
         scopes: String - google developer scope. Example: 'https://mail.google.com/'
         client_secret_file_path: String - path to google creds json from google developer account
         application_name: String - google developer application name
-        drive_files: List - used by multiple functions in the class to have a local list of google drive files
 
     """
     def __init__(
