@@ -3,6 +3,7 @@ import sys
 import time
 import base64
 import httplib2
+from email import message
 from mimetypes import MimeTypes
 from posixpath import expanduser
 from email.mime.text import MIMEText
@@ -25,7 +26,7 @@ Example usage:
     gmail = Gmail()
     
     message = gmail.create_message(to="email@gmail.com", subject="Automated subject", message_text="Automated message body")
-    gmail.send_message(service=gmail.service, user_id="email@gmail.com", message=message)
+    gmail.send_message(message=message)
     
     gmail.pull_and_set_message_ids(max_results=1)
     print(gmail.message_ids)
@@ -181,15 +182,15 @@ class Gmail:
     Gmail(): send_message - Send an email message.
 
     params:
-        user_id: String - User's email address. The special value "me" can be used to indicate the authenticated user.
         message: Message object - Message to be sent.
 
     returns:
         Dictionary (object): Sent message object
     """
-    def send_message(self, user_id, message):
+    def send_message(self, message):
         try:
-            message = self.service.users().messages().send(userId=user_id, body=message.execute())
+            message = (self.service.users().messages().send(userId='me', body=message)
+               .execute())
             print("Sent message id: {}".format(message.get('id')))
             return message
         except Exception as e: 
@@ -291,7 +292,7 @@ class Gmail:
                 if header.get("name") == "Message-ID":
                     msg["Message-ID"] = message_id
                 if header.get("name") == "Subject":
-                    msg["Subject"] = header.get("value", "Subject has no value")
+                    msg["Subject"] = header.get("value", "Subject has no value").replace('“','"').replace('”','"').replace("\r\n"," ")
                 if header.get("name") == "From":
                     msg["From"] = header.get("value", "From has no value")
                 if header.get("name") == "To":
@@ -342,7 +343,7 @@ class Gmail:
         item: Dictionary - contains keyword to match with user email
 
     returns:
-        String: string that is related to the keyword phrase
+        String: string that is related to the keyword phrase or default if string not found in mail
     """
     def get_response_string(self, message_text, item):
         response_string = ""
@@ -356,7 +357,7 @@ class Gmail:
                 break
             string_start += 1
         
-        return response_string
+        return response_string if response_string != "" else item.get("default")
 
 
     """
@@ -368,7 +369,7 @@ class Gmail:
         item: Dictionary - contains keywords to match with user email
 
     returns:
-        Variable based on item type
+        response is varied based on item type. Could return string or bool. Defaults if value cannot be pulled from message
     """
     def get_response_for_item_from_message(self, message_id, message_text, item):
         response = item.get("default", None)
@@ -382,9 +383,7 @@ class Gmail:
         elif item_type == "uuid":
             response = item.get("phrase")
         elif item_type == "attachment":
-            path_for_attachment = self.get_response_string(message_text=message_text, item=item)
-            self.save_attachment_from_message_id(message_id=message_id, path_for_attachment=path_for_attachment)
-            response = path_for_attachment
+            response = self.get_response_string(message_text=message_text, item=item)
         elif item_type == None:
             raise Exception("Error: no type provided for item to find in email. Item is: {}".format(item))
         else:
@@ -409,6 +408,8 @@ class Gmail:
                     user_response.append({
                         "name": item.get("name"),
                         "type": item.get("type"),
+                        "from": message_content.get("From"),
+                        "message_id": message_content.get("Message-ID"),
                         "response": self.get_response_for_item_from_message(message_id=message_content.get("Message-ID"), message_text=combined_message_text, item=item),
                     })
         return user_response
@@ -424,14 +425,14 @@ class Gmail:
     returns:
         List: list of objects containing pertinent response data for items passed in
     """
-    def poll_email_and_get_response_from_user(self, items_to_match, retry_count=20, seconds_between_retries=10):
+    def poll_email_and_get_response_from_user(self, items_to_match, retry_count=20, seconds_between_retries=10, max_results=1):
         
         tries = 0
         user_response = None
         while not user_response and tries < retry_count:
             
             print("Polling email. Try #: ", str(tries+1))
-            self.pull_and_set_message_ids(max_results=1)
+            self.pull_and_set_message_ids(max_results=max_results)
             self.pull_and_set_message_contents_from_message_ids()
             user_response = self.get_response_from_user_email(items_to_match=items_to_match)
             if user_response:
