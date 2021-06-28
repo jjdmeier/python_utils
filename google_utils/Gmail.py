@@ -38,7 +38,6 @@ Example usage:
         {"name": "uuid", "type": "uuid", "phrase": "0123456789", "optional": False},
         {"name": "test", "type": "bool", "phrase": "test=true", "default": False, "optional": True},
         {"name": "test2", "type": "string", "phrase": "test2=", "default": "default_test2", "optional": True},
-        {"name": "attachment", "type": "attachment", "phrase": "Attachment_path=", "default": ".", "optional": True},
     ]    
     gmail.poll_email_and_get_response_from_user(items_to_match=example_items_to_match, retry_count=5, seconds_between_retries=10)
 
@@ -378,8 +377,8 @@ class Gmail:
         response is varied based on item type. Could return string or bool. Defaults if value cannot be pulled from message
     """
     def get_response_for_item_from_message(self, message_text, item):
-        response = item.get("default", None)
-        item_type = item.get("type", None)
+        response = item.get("default")
+        item_type = item.get("type")
 
         if item_type == "string":
             if item.get("phrase") in message_text:
@@ -388,9 +387,7 @@ class Gmail:
             response = True if item.get("phrase") in message_text else False
         elif item_type == "uuid":
             response = item.get("phrase")
-        elif item_type == "attachment":
-            response = self.get_response_string(message_text=message_text, item=item)
-        elif item_type == None:
+        elif not item_type:
             raise Exception("Error: no type provided for item to find in email. Item is: {}".format(item))
         else:
             raise Exception("Error: Unknown type provided for item to find in email. Item is: {}".format(item))
