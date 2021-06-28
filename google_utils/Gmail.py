@@ -218,14 +218,16 @@ class Gmail:
     Gmail(): pull_and_set_message_contents_from_message_ids - loop through class variable message_ids and set class variable relevant message_contents
 
     params:
+        inbox: String - Ensure message came from a specifc inbox
+        users: List - Ensure message came from a specific email address
 
     returns:
     """
-    def pull_and_set_message_contents_from_message_ids(self):
+    def pull_and_set_message_contents_from_message_ids(self, inbox="INBOX", users=[]):
         self.message_contents = []
 
         for message_id in self.message_ids:
-            self.message_contents.append(self.get_message_content(message_id=message_id))
+            self.message_contents.append(self.get_message_content(message_id=message_id, inbox=inbox, users=users))
 
 
     """
@@ -273,11 +275,13 @@ class Gmail:
 
     params:
         message_id: String - message id provided by Google API
+        inbox: String - Ensure message came from a specifc inbox
+        users: List - Ensure message came from a specific email address
 
     returns:
         Dictionary (object): Custom object with pertinent content from a google response. 
     """
-    def get_message_content(self, message_id):
+    def get_message_content(self, message_id, inbox="INBOX", users=[]):
         response = {}
         try:
             response = self.service.users().messages().get(userId='me', id=message_id).execute()
@@ -285,18 +289,21 @@ class Gmail:
             raise Exception("Error: unable to get messageId through google API call: {}".format(e))
         
         msg = dict()
-        if response and response.get("labelIds") and "INBOX" in response.get("labelIds"): # check in INBOX for message, otherwise will search all messages including drafts
+        if response and response.get("labelIds") and inbox in response.get("labelIds"): 
             payload = response.get("payload")           
             headers = payload.get("headers")
+            msg["Message-ID"] = message_id
+            
             for header in headers:
-                if header.get("name") == "Message-ID":
-                    msg["Message-ID"] = message_id
                 if header.get("name") == "Subject":
                     msg["Subject"] = header.get("value", "Subject has no value").replace('“','"').replace('”','"').replace("\r\n"," ")
                 if header.get("name") == "From":
+                    if len(users) > 0 and not any(user in header.get("value") for user in users):
+                        return dict()
                     msg["From"] = header.get("value", "From has no value")
                 if header.get("name") == "To":
                     msg["To"] = header.get("value", "To has no value")
+
             if payload.get("body").get("data"):
                 base64_encoded_data = payload.get("body").get("data")
                 msg["Body"] = base64.b64decode(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
@@ -364,14 +371,13 @@ class Gmail:
     Gmail(): get_response_for_item_from_message - builds and returns response for a given message
 
     params:
-        message_id: String - message id provided by Google API
         message_text: String - email header and body text
         item: Dictionary - contains keywords to match with user email
 
     returns:
         response is varied based on item type. Could return string or bool. Defaults if value cannot be pulled from message
     """
-    def get_response_for_item_from_message(self, message_id, message_text, item):
+    def get_response_for_item_from_message(self, message_text, item):
         response = item.get("default", None)
         item_type = item.get("type", None)
 
@@ -391,7 +397,7 @@ class Gmail:
         return response
 
     """
-    Gmail(): get_response_for_item_from_message - builds and returns object for a given email
+    Gmail(): get_response_from_user_email - builds and returns object for a given email
 
     params:
         items_to_match: List - list of item keywords to search for in an email
@@ -410,7 +416,7 @@ class Gmail:
                         "type": item.get("type"),
                         "from": message_content.get("From"),
                         "message_id": message_content.get("Message-ID"),
-                        "response": self.get_response_for_item_from_message(message_id=message_content.get("Message-ID"), message_text=combined_message_text, item=item),
+                        "response": self.get_response_for_item_from_message(message_text=combined_message_text, item=item),
                     })
         return user_response
 
@@ -419,13 +425,15 @@ class Gmail:
 
     params:
         items_to_match: List - list of item keywords to search for in an email
+        inbox: String - Ensure message came from a specifc inbox
+        users: List - Ensure message came from a specific email address
         retry_count: Integer - number of times to retry search for email
         seconds_between_retries: Integer - number of seconds to wait before retry
 
     returns:
         List: list of objects containing pertinent response data for items passed in
     """
-    def poll_email_and_get_response_from_user(self, items_to_match, retry_count=20, seconds_between_retries=10, max_results=1):
+    def poll_email_and_get_response_from_user(self, items_to_match, inbox="INBOX", users=[], retry_count=20, seconds_between_retries=10, max_results=1):
         
         tries = 0
         user_response = None
@@ -433,7 +441,7 @@ class Gmail:
             
             print("Polling email. Try #: ", str(tries+1))
             self.pull_and_set_message_ids(max_results=max_results)
-            self.pull_and_set_message_contents_from_message_ids()
+            self.pull_and_set_message_contents_from_message_ids(inbox=inbox, users=users)
             user_response = self.get_response_from_user_email(items_to_match=items_to_match)
             if user_response:
                 break
