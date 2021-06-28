@@ -34,12 +34,12 @@ Example usage:
     gmail.pull_and_set_message_contents_from_message_ids()
     print(gmail.message_contents)
 
-    example_items_to_match = [
-        {"name": "uuid", "type": "uuid", "phrase": "0123456789", "optional": False},
-        {"name": "test", "type": "bool", "phrase": "test=true", "default": False, "optional": True},
-        {"name": "test2", "type": "string", "phrase": "test2=", "default": "default_test2", "optional": True},
-    ]    
-    gmail.poll_email_and_get_response_from_user(items_to_match=example_items_to_match, retry_count=5, seconds_between_retries=10)
+    from GmailSearchItem import GmailSearchItem # import GmailSearchItem class
+    items = [
+        GmailSearchItem(name="Test", type=1, phrase="test=", default="default value", optional=False),
+        GmailSearchItem(name="Test2", type=1, phrase="test2=", default="default value 2", optional=True),
+    ]
+    user_response = gmail.poll_email_and_get_response_from_user(items_to_match=items, retry_count=5, seconds_between_retries=10)
 
 """
 
@@ -337,7 +337,7 @@ class Gmail:
     """
     def is_correct_email(self, message_text, items_to_match):
         for item in items_to_match:
-            if not item.get("optional") and item.get("phrase") not in message_text:
+            if not item.optional and item.phrase not in message_text:
                 return False
         return True
 
@@ -353,7 +353,7 @@ class Gmail:
     """
     def get_response_string(self, message_text, item):
         response_string = ""
-        string_start = message_text.find(item.get("phrase"))
+        string_start = message_text.find(item.phrase)
         while string_start < len(message_text):
             if message_text[string_start] == '"':
                 string_start += 1
@@ -363,7 +363,7 @@ class Gmail:
                 break
             string_start += 1
         
-        return response_string if response_string != "" else item.get("default")
+        return response_string if response_string != "" else item.default
 
 
     """
@@ -377,16 +377,16 @@ class Gmail:
         response is varied based on item type. Could return string or bool. Defaults if value cannot be pulled from message
     """
     def get_response_for_item_from_message(self, message_text, item):
-        response = item.get("default")
-        item_type = item.get("type")
+        response = item.default
+        item_type = item.type
 
         if item_type == "string":
-            if item.get("phrase") in message_text:
+            if item.phrase in message_text:
                 response = self.get_response_string(message_text=message_text, item=item)
         elif item_type == "bool":
-            response = True if item.get("phrase") in message_text else False
+            response = True if item.phrase in message_text else False
         elif item_type == "uuid":
-            response = item.get("phrase")
+            response = item.phrase
         elif not item_type:
             raise Exception("Error: no type provided for item to find in email. Item is: {}".format(item))
         else:
@@ -409,8 +409,8 @@ class Gmail:
             if self.is_correct_email(message_text=combined_message_text, items_to_match=items_to_match):
                 for item in items_to_match:
                     user_response.append({
-                        "name": item.get("name"),
-                        "type": item.get("type"),
+                        "name": item.name,
+                        "type": item.type,
                         "from": message_content.get("From"),
                         "message_id": message_content.get("Message-ID"),
                         "response": self.get_response_for_item_from_message(message_text=combined_message_text, item=item),

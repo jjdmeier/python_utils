@@ -33,13 +33,13 @@ class GmailSearchItem:
     """
     def __init__(self, name, type, phrase, default, optional):
 
-        if type(optional) != bool:
+        if optional != True and optional != False:
             raise Exception("Error: parameter 'optional' was not of type bool.")
         if not ALLOWED_TYPES.get(type):
             raise Exception("Error: parameter 'type' was an unkown. Valid Types: {}".format(ALLOWED_TYPES))
 
         self.name = name
-        self.type = type
+        self.type = ALLOWED_TYPES.get(type)
         self.phrase = phrase
         self.default = default
         self.optional = optional
