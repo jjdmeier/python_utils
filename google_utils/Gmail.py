@@ -23,37 +23,15 @@ from oauth2client.client import flow_from_clientsecrets
 """
 Gmail: Class for interacting with a gmail account programmatically 
 
-Example usage:
-
-    gmail = Gmail()
-    
-    message = gmail.create_message(to="email@gmail.com", subject="Automated subject", message_text="Automated message body")
-    gmail.send_message(message=message)
-    
-    gmail.pull_and_set_message_ids(max_results=1)
-    print(gmail.message_ids)
-    
-    gmail.pull_and_set_message_contents_from_message_ids()
-    print(gmail.message_contents)
-
-    from GmailSearchItem import GmailSearchItem # import GmailSearchItem class
-    items = [
-        GmailSearchItem(name="Test", type=1, phrase="test=", default="default value", optional=False),
-        GmailSearchItem(name="Test2", type=1, phrase="test2=", default="default value 2", optional=True),
-    ]
-    user_response = gmail.poll_email_and_get_response_from_user(items_to_match=items, retry_count=5, seconds_between_retries=10)
-
-"""
-
-"""
-TODO: constructor - Do not auth in the constructor. Not generic enough. 
+- TODO: constructor - Do not auth in the constructor. Not generic enough. 
 Make the program that is using it set the application name and secrets 
 file path and call auth explicitly.
-TODO: items_to_match - create a class for this object so that all possible
+- TODO: items_to_match - create a class for this object so that all possible
 types are obvious to a user.
 """
 
 class Gmail:
+
 
     """
     Gmail(): constructor
@@ -83,6 +61,7 @@ class Gmail:
         http = credentials.authorize(httplib2.Http())
         self.service = discovery.build('gmail', 'v1', http=http)
 
+
     """
     Gmail(): get_credentials - checks if credentials already exist, if not save them to credential
 
@@ -107,6 +86,7 @@ class Gmail:
             print('Storing credentials to ' + credential_path)
         return credentials
 
+
     """
     Gmail(): create_message - Create a message for an email.
 
@@ -126,6 +106,7 @@ class Gmail:
         return {
             'raw': raw_message.decode("utf-8")
         }
+
 
     """
     Gmail(): create_message_with_attachment - Create a message for an email.
@@ -419,6 +400,7 @@ class Gmail:
             raise Exception("Error: Unknown type provided for item to find in email. Item is: {}".format(item))
         return response
 
+
     """
     Gmail(): get_response_from_user_email - builds and returns object for a given email
 
@@ -443,6 +425,7 @@ class Gmail:
                     })
         return user_response
 
+
     """
     Gmail(): poll_email_and_get_response_from_user - polls email inbox and returns object for a given email
 
@@ -463,7 +446,7 @@ class Gmail:
         while not user_response and tries < retry_count:
             
             print("Polling email. Try #: ", str(tries+1))
-            self.pull_and_set_message_ids(max_results=max_results)
+            self.pull_and_set_message_ids(inbox=inbox, max_results=max_results)
             self.pull_and_set_message_contents_from_message_ids(inbox=inbox, users=users)
             user_response = self.get_response_from_user_email(items_to_match=items_to_match)
             if user_response:
@@ -472,3 +455,28 @@ class Gmail:
             tries += 1
         
         return user_response
+
+# Example usage and testing area
+def main():
+    
+    gmail = Gmail()
+    
+    message = gmail.create_message(to="email@gmail.com", subject="Automated subject", message_text="Automated message body")
+    gmail.send_message(message=message)
+    
+    gmail.pull_and_set_message_ids(max_results=1)
+    print(gmail.message_ids)
+    
+    gmail.pull_and_set_message_contents_from_message_ids()
+    print(gmail.message_contents)
+
+    from GmailSearchItem import GmailSearchItem # import GmailSearchItem class from local directory
+    items = [
+        GmailSearchItem(name="Test", type=1, phrase="test=", default="default value", optional=False),
+        GmailSearchItem(name="Test2", type=1, phrase="test2=", default="default value 2", optional=True),
+    ]
+    user_response = gmail.poll_email_and_get_response_from_user(items_to_match=items, retry_count=5, seconds_between_retries=10)
+    print(user_response)
+
+if __name__ == "__main__":
+    main()
