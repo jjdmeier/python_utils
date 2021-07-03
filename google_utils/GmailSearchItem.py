@@ -8,6 +8,9 @@ GmailSearchItem: Item class used when searching for a specific email.
         - bool - Matches keyphrase and flips bit based on email
 
 Example usage:
+    item = GmailSearchItem(name="Test", type=1, phrase="test=", default="default value", optional=False)
+    
+    item.get_allowed_types()
     
 """
 

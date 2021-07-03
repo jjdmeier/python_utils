@@ -27,7 +27,7 @@ Example usage:
     google_drive = GoogleDrive()
 
     google_drive.upload("./example.mp4")
-    file_ids = google_drive.get_file_ids(example.mp4")
+    file_ids = google_drive.get_file_ids("example.mp4")
     for file_id in file_ids:
         google_drive.share(file_id, "email@gmail.com")
 

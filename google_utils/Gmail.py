@@ -1,6 +1,8 @@
 import os
+import re
 import sys
 import time
+import uuid
 import base64
 import httplib2
 from email import message
@@ -238,7 +240,7 @@ class Gmail:
 
     returns:
     """
-    def save_attachment_from_message_id(self, message_id, path_for_attachment="."):
+    def save_attachment_from_message_id(self, message_id, path_for_attachment=".", avoid_overwrite=True):
         message = {}
         try:
             message = self.service.users().messages().get(userId='me', id=message_id).execute()
@@ -261,12 +263,36 @@ class Gmail:
                     
                     if data:
                         file_data = base64.urlsafe_b64decode(data.encode('UTF-8'))
-                        path = path_for_attachment+"/"+part['filename']
+                        if avoid_overwrite:
+                            path = path_for_attachment+"/"+str(uuid.uuid4())+"-"+part['filename']
+                        else:
+                            path = path_for_attachment+"/"+part['filename']
 
                         with open(path, 'wb') as f:
                             f.write(file_data)
                     else:
                         raise Exception("Error: data not found for attachment in message that contains filename")
+
+
+    """
+    Gmail(): decode_base64 - Decode base64, padding being optional.
+
+    params:
+        data: String - Base64 data as an ASCII byte string
+
+    returns:
+        String: The decoded byte string.
+
+    credits:
+        https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
+    """
+    def decode_base64(self, data, altchars=b'+/'):
+        
+        data = re.sub(rb'[^a-zA-Z0-9%s]+' % altchars, b'', data)  # normalize
+        missing_padding = len(data) % 4
+        if missing_padding:
+            data += b'='* (4 - missing_padding)
+        return base64.b64decode(data, altchars)
 
 
     """
@@ -305,7 +331,7 @@ class Gmail:
 
             if payload.get("body").get("data"):
                 base64_encoded_data = payload.get("body").get("data")
-                msg["Body"] = base64.b64decode(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
+                msg["Body"] = self.decode_base64(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
             elif payload.get("parts"):
                 for part in payload.get("parts"):
                     if part.get("mimeType") == "multipart/alternative":
@@ -314,11 +340,11 @@ class Gmail:
                                 if inner_part.get("mimeType") == "text/plain":
                                     base64_encoded_data = inner_part.get("body").get("data")
                                     if base64_encoded_data:
-                                        msg["Body"] = base64.b64decode(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
+                                        msg["Body"] = self.decode_base64(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
                     elif part.get("mimeType") == "text/plain":
                         base64_encoded_data = part.get("body").get("data")
                         if base64_encoded_data:
-                            msg["Body"] = base64.b64decode(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
+                            msg["Body"] = self.decode_base64(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
             else:
                 raise Exception("Error: Not able to parse email: {}".format(response))
 
