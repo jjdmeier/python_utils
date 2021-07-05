@@ -310,7 +310,7 @@ class Gmail:
 
             if payload.get("body").get("data"):
                 base64_encoded_data = payload.get("body").get("data")
-                msg["Body"] = self.decode_base64(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
+                msg["Body"] = base64.urlsafe_b64decode(base64_encoded_data.encode("ASCII")).decode("utf-8")
             elif payload.get("parts"):
                 for part in payload.get("parts"):
                     if part.get("mimeType") == "multipart/alternative":
@@ -319,11 +319,11 @@ class Gmail:
                                 if inner_part.get("mimeType") == "text/plain":
                                     base64_encoded_data = inner_part.get("body").get("data")
                                     if base64_encoded_data:
-                                        msg["Body"] = self.decode_base64(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
+                                        msg["Body"] = base64.urlsafe_b64decode(base64_encoded_data.encode("ASCII")).decode("utf-8")
                     elif part.get("mimeType") == "text/plain":
                         base64_encoded_data = part.get("body").get("data")
                         if base64_encoded_data:
-                            msg["Body"] = self.decode_base64(base64_encoded_data.encode("utf8")).decode("utf8").replace('“','"').replace('”','"').replace("\r\n"," ")
+                            msg["Body"] = base64.urlsafe_b64decode(base64_encoded_data.encode("ASCII")).decode("utf-8")
             else:
                 raise Exception("Error: Not able to parse email: {}".format(response))
 
