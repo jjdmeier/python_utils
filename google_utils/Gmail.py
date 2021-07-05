@@ -26,8 +26,6 @@ Gmail: Class for interacting with a gmail account programmatically
 - TODO: constructor - Do not auth in the constructor. Not generic enough. 
 Make the program that is using it set the application name and secrets 
 file path and call auth explicitly.
-- TODO: items_to_match - create a class for this object so that all possible
-types are obvious to a user.
 """
 
 class Gmail:
@@ -446,7 +444,7 @@ class Gmail:
         while not user_response and tries < retry_count:
             
             print("Polling email. Try #: ", str(tries+1))
-            self.pull_and_set_message_ids(inbox=inbox, max_results=max_results)
+            self.pull_and_set_message_ids(max_results=max_results)
             self.pull_and_set_message_contents_from_message_ids(inbox=inbox, users=users)
             user_response = self.get_response_from_user_email(items_to_match=items_to_match)
             if user_response:
