@@ -425,6 +425,22 @@ class Gmail:
 
 
     """
+    Gmail(): trash_message - removes an email from inbox and places it in the trash folder
+
+    params:
+        message_id: String - message id provided by Google API
+
+    returns:
+    """
+    def trash_message(self, message_id):
+        try:
+            message = (self.service.users().messages().trash(userId='me', id=message_id).execute())
+            print('Message Id: %s sent to Trash.' % message['id'])
+        except Exception as error:
+            print('An error occurred while trashing email: %s' % error)
+
+
+    """
     Gmail(): poll_email_and_get_response_from_user - polls email inbox and returns object for a given email
 
     params:
@@ -443,7 +459,7 @@ class Gmail:
         user_response = None
         while not user_response and tries < retry_count:
             
-            print("Polling email. Try #: ", str(tries+1))
+            print("Polling email. Try #:{}".format(str(tries+1)))
             self.pull_and_set_message_ids(max_results=max_results)
             self.pull_and_set_message_contents_from_message_ids(inbox=inbox, users=users)
             user_response = self.get_response_from_user_email(items_to_match=items_to_match)
@@ -467,6 +483,8 @@ def main():
     
     gmail.pull_and_set_message_contents_from_message_ids()
     print(gmail.message_contents)
+
+    gmail.trash_message(message_id="ID_OF_A_MESSAGE")
 
     from GmailSearchItem import GmailSearchItem # import GmailSearchItem class from local directory
     items = [
